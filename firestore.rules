@@ -34,6 +34,8 @@ service cloud.firestore {
         'creadorUid',
         'oculto',
         'esBase',
+        'aprobado',
+        'rechazado',
         'creadoEn'
       ]) &&
       request.resource.data.tipo in ['hidratacion', 'sombra', 'aire', 'refugio'] &&
@@ -43,6 +45,8 @@ service cloud.firestore {
       request.resource.data.direccionVerificada == false &&
       request.resource.data.oculto == false &&
       request.resource.data.esBase == false &&
+      request.resource.data.aprobado == false &&
+      request.resource.data.rechazado == false &&
       request.resource.data.creadorUid == request.auth.uid;
     }
 
@@ -151,8 +155,21 @@ service cloud.firestore {
 
     match /puntos/{puntoId} {
       allow read: if true;
-      allow create: if puntoReportadoValido() || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /puntos_reportados/{puntoId} {
+      allow read: if isAdmin();
+      allow create: if puntoReportadoValido();
       allow update, delete: if isAdmin();
+    }
+
+    match /usuarios_reportes/{uid}/puntos_reportados/{reporteId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['puntoReportadoId', 'creadoEn']);
+      allow update, delete: if false;
     }
 
     match /puntos_estado/{puntoId} {

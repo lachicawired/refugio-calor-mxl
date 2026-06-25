@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/punto.dart';
 import '../services/punto_service.dart';
+import 'seleccionar_ubicacion_screen.dart';
 
 class ReportarPuntoScreen extends StatefulWidget {
   final Position? miUbicacion;
@@ -21,19 +23,17 @@ class _ReportarPuntoScreenState extends State<ReportarPuntoScreen> {
   final _telefonoController = TextEditingController();
   final _horarioController = TextEditingController();
   final _descripcionController = TextEditingController();
-  final _latController = TextEditingController();
-  final _lngController = TextEditingController();
 
   String _tipo = 'hidratacion';
   bool _guardando = false;
+  LatLng? _ubicacionSeleccionada;
 
   @override
   void initState() {
     super.initState();
     final ubicacion = widget.miUbicacion;
     if (ubicacion != null) {
-      _latController.text = ubicacion.latitude.toStringAsFixed(6);
-      _lngController.text = ubicacion.longitude.toStringAsFixed(6);
+      _ubicacionSeleccionada = LatLng(ubicacion.latitude, ubicacion.longitude);
     }
   }
 
@@ -44,13 +44,18 @@ class _ReportarPuntoScreenState extends State<ReportarPuntoScreen> {
     _telefonoController.dispose();
     _horarioController.dispose();
     _descripcionController.dispose();
-    _latController.dispose();
-    _lngController.dispose();
     super.dispose();
   }
 
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_ubicacionSeleccionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona la ubicación en el mapa.')),
+      );
+      return;
+    }
 
     setState(() => _guardando = true);
 
@@ -61,8 +66,8 @@ class _ReportarPuntoScreenState extends State<ReportarPuntoScreen> {
         tipo: _tipo,
         direccion: _direccionController.text.trim(),
         telefono: _telefonoController.text.trim(),
-        lat: double.parse(_latController.text.trim()),
-        lng: double.parse(_lngController.text.trim()),
+        lat: _ubicacionSeleccionada!.latitude,
+        lng: _ubicacionSeleccionada!.longitude,
         horario: _horarioController.text.trim(),
         descripcion: _descripcionController.text.trim(),
         estado: 'pendiente',
@@ -88,9 +93,9 @@ class _ReportarPuntoScreenState extends State<ReportarPuntoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo guardar el punto: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) {
@@ -106,30 +111,24 @@ class _ReportarPuntoScreenState extends State<ReportarPuntoScreen> {
     return null;
   }
 
-  String? _coordenada(String? value) {
-    final requerido = _requerido(value);
-    if (requerido != null) return requerido;
+  Future<void> _seleccionarUbicacion() async {
+    const centroMexicali = LatLng(32.6245, -115.4523);
+    final seleccion = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SeleccionarUbicacionScreen(
+          ubicacionInicial: _ubicacionSeleccionada ?? centroMexicali,
+        ),
+      ),
+    );
 
-    if (double.tryParse(value!.trim()) == null) {
-      return 'Usa un número válido';
+    if (seleccion != null && mounted) {
+      setState(() => _ubicacionSeleccionada = seleccion);
     }
-    return null;
-  }
-
-  void _usarMiUbicacion() {
-    final ubicacion = widget.miUbicacion;
-    if (ubicacion == null) return;
-
-    setState(() {
-      _latController.text = ubicacion.latitude.toStringAsFixed(6);
-      _lngController.text = ubicacion.longitude.toStringAsFixed(6);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final ubicacionDisponible = widget.miUbicacion != null;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Reportar punto')),
       body: Form(
@@ -182,42 +181,20 @@ class _ReportarPuntoScreenState extends State<ReportarPuntoScreen> {
               validator: _requerido,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _latController,
-                    decoration: const InputDecoration(labelText: 'Latitud'),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                    validator: _coordenada,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _lngController,
-                    decoration: const InputDecoration(labelText: 'Longitud'),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                    validator: _coordenada,
-                  ),
-                ),
-              ],
+            OutlinedButton.icon(
+              onPressed: _seleccionarUbicacion,
+              icon: const Icon(Icons.map),
+              label: Text(
+                _ubicacionSeleccionada == null
+                    ? 'Seleccionar ubicación en mapa'
+                    : 'Cambiar ubicación seleccionada',
+              ),
             ),
-            if (ubicacionDisponible) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _usarMiUbicacion,
-                  icon: const Icon(Icons.my_location),
-                  label: const Text('Usar mi ubicación actual'),
-                ),
+            if (_ubicacionSeleccionada != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Ubicación seleccionada',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
             const SizedBox(height: 12),
@@ -225,7 +202,7 @@ class _ReportarPuntoScreenState extends State<ReportarPuntoScreen> {
               controller: _horarioController,
               decoration: const InputDecoration(
                 labelText: 'Horario',
-                hintText: 'Ej. 8:00 a 18:00 o Por confirmar',
+                hintText: 'Ej. 4:00 p.m. a 8:00 a.m. o 24 horas',
                 prefixIcon: Icon(Icons.schedule),
               ),
               validator: _requerido,

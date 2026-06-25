@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/punto.dart';
 import '../services/admin_service.dart';
 
@@ -183,6 +184,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  Future<void> _copiarJsonAprobados() async {
+    final json = await _adminService.generarJsonPuntosAprobados();
+    await Clipboard.setData(ClipboardData(text: json));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('JSON de puntos aprobados copiado.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -191,6 +202,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         appBar: AppBar(
           title: const Text('Panel admin'),
           actions: [
+            IconButton(
+              tooltip: 'Copiar JSON de aprobados',
+              onPressed: _copiarJsonAprobados,
+              icon: const Icon(Icons.copy),
+            ),
             IconButton(
               tooltip: 'Cerrar sesión',
               onPressed: _cerrarSesion,
@@ -212,10 +228,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ),
         body: TabBarView(
           children: [
-            _PendientesTab(
-              adminService: _adminService,
-              onEditar: (punto) => _abrirFormulario(punto: punto),
-            ),
+            _PendientesTab(adminService: _adminService),
             _ReportesTab(adminService: _adminService),
             _PuntosTab(
               adminService: _adminService,
@@ -230,14 +243,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
 class _PendientesTab extends StatelessWidget {
   final AdminService adminService;
-  final void Function(Punto punto) onEditar;
 
-  const _PendientesTab({required this.adminService, required this.onEditar});
+  const _PendientesTab({required this.adminService});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Punto>>(
-      stream: adminService.obtenerPuntosPendientes(),
+    return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+      stream: adminService.obtenerPuntosReportadosPendientes(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
@@ -246,67 +258,104 @@ class _PendientesTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final puntos = snapshot.data!;
-        if (puntos.isEmpty) {
+        final reportes = snapshot.data!;
+        if (reportes.isEmpty) {
           return const Center(child: Text('No hay puntos pendientes.'));
         }
 
         return ListView.separated(
           padding: const EdgeInsets.all(12),
-          itemCount: puntos.length,
+          itemCount: reportes.length,
           separatorBuilder: (context, index) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
-            final punto = puntos[index];
-            return _AdminPuntoCard(
-              punto: punto,
+            final reporte = reportes[index];
+            final data = reporte.data();
+            return _ReportePuntoCard(
+              data: data,
               actions: [
-                TextButton.icon(
-                  onPressed: () => onEditar(punto),
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Editar'),
-                ),
-                TextButton.icon(
-                  onPressed: () => adminService.marcarCerrado(punto),
-                  icon: const Icon(Icons.block),
-                  label: const Text('Cerrar'),
-                ),
-                TextButton.icon(
-                  onPressed: () async {
-                    final confirmar = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Descartar punto'),
-                        content: Text('¿Eliminar "${punto.nombre}"?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancelar'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Eliminar'),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (confirmar == true) {
-                      await adminService.eliminarPunto(punto);
-                    }
-                  },
-                  icon: const Icon(Icons.delete),
-                  label: const Text('Descartar'),
-                ),
                 FilledButton.icon(
-                  onPressed: () => adminService.aceptarPunto(punto),
+                  onPressed: () => adminService.aprobarPuntoReportado(reporte),
                   icon: const Icon(Icons.verified),
-                  label: const Text('Aceptar'),
+                  label: const Text('Aprobar'),
+                ),
+                TextButton.icon(
+                  onPressed: () =>
+                      adminService.rechazarPuntoReportado(reporte.id),
+                  icon: const Icon(Icons.block),
+                  label: const Text('Rechazar'),
+                ),
+                TextButton.icon(
+                  onPressed: () =>
+                      adminService.eliminarPuntoReportado(reporte.id),
+                  icon: const Icon(Icons.delete),
+                  label: const Text('Eliminar'),
                 ),
               ],
             );
           },
         );
       },
+    );
+  }
+}
+
+class _ReportePuntoCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final List<Widget> actions;
+
+  const _ReportePuntoCard({required this.data, required this.actions});
+
+  @override
+  Widget build(BuildContext context) {
+    final creadoEn = data['creadoEn'];
+    final fecha = creadoEn is Timestamp
+        ? '${creadoEn.toDate().day.toString().padLeft(2, '0')}/${creadoEn.toDate().month.toString().padLeft(2, '0')}/${creadoEn.toDate().year}'
+        : 'Sin fecha';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              data['nombre'] ?? 'Sin nombre',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            _AdminInfoLine(label: 'Dirección', value: data['direccion'] ?? ''),
+            _AdminInfoLine(
+              label: 'Ubicación',
+              value: '${data['lat'] ?? ''}, ${data['lng'] ?? ''}',
+            ),
+            _AdminInfoLine(label: 'Qué ofrece', value: data['tipo'] ?? ''),
+            _AdminInfoLine(label: 'Horario', value: data['horario'] ?? ''),
+            if ((data['telefono'] ?? '').toString().isNotEmpty)
+              _AdminInfoLine(label: 'Teléfono', value: data['telefono']),
+            _AdminInfoLine(label: 'Detalles', value: data['descripcion'] ?? ''),
+            _AdminInfoLine(label: 'Fecha', value: fecha),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, runSpacing: 8, children: actions),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminInfoLine extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _AdminInfoLine({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text('$label: ${value.isEmpty ? 'Sin dato' : value}'),
     );
   }
 }

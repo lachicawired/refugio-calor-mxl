@@ -8,6 +8,8 @@ import 'device_id_service.dart';
 
 class PuntoService {
   static const int _votosMinimosParaCambiarEstado = 2;
+  static const int _maxReportesPunto = 2;
+  static const Duration _ventanaReportesPunto = Duration(days: 3);
 
   final _db = FirebaseFirestore.instance;
 
@@ -27,6 +29,7 @@ class PuntoService {
         .collection('puntos')
         .where('esBase', isEqualTo: false)
         .where('oculto', isEqualTo: false)
+        .where('aprobado', isEqualTo: true)
         .get();
 
     final puntosDinamicos = puntosFirestore.docs
@@ -66,8 +69,19 @@ class PuntoService {
 
   Future<void> reportarPuntoComunitario(Punto punto) async {
     final uid = await DeviceIdService.obtenerDeviceId();
+    final limite = await _usuarioSuperoLimiteReportes(uid);
+    if (limite) {
+      throw LimiteReportesException();
+    }
 
-    await _db.collection('puntos').add({
+    final reporteRef = _db.collection('puntos_reportados').doc();
+    final logRef = _db
+        .collection('usuarios_reportes')
+        .doc(uid)
+        .collection('puntos_reportados')
+        .doc(reporteRef.id);
+
+    final data = {
       ...punto.toFirestore(),
       'estado': 'pendiente',
       'confianza': 'reciente',
@@ -76,8 +90,18 @@ class PuntoService {
       'creadorUid': uid,
       'oculto': false,
       'esBase': false,
+      'aprobado': false,
+      'rechazado': false,
+      'creadoEn': FieldValue.serverTimestamp(),
+    };
+
+    final batch = _db.batch();
+    batch.set(reporteRef, data);
+    batch.set(logRef, {
+      'puntoReportadoId': reporteRef.id,
       'creadoEn': FieldValue.serverTimestamp(),
     });
+    await batch.commit();
   }
 
   Future<void> registrarReporte(Reporte reporte) async {
@@ -261,5 +285,27 @@ class PuntoService {
     final month = ahora.month.toString().padLeft(2, '0');
     final day = ahora.day.toString().padLeft(2, '0');
     return '$year$month$day';
+  }
+
+  Future<bool> _usuarioSuperoLimiteReportes(String uid) async {
+    final desde = Timestamp.fromDate(
+      DateTime.now().subtract(_ventanaReportesPunto),
+    );
+    final snapshot = await _db
+        .collection('usuarios_reportes')
+        .doc(uid)
+        .collection('puntos_reportados')
+        .where('creadoEn', isGreaterThanOrEqualTo: desde)
+        .limit(_maxReportesPunto)
+        .get();
+
+    return snapshot.docs.length >= _maxReportesPunto;
+  }
+}
+
+class LimiteReportesException implements Exception {
+  @override
+  String toString() {
+    return 'Ya reportaste 2 puntos recientemente. Intenta de nuevo más tarde.';
   }
 }

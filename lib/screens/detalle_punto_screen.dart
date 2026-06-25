@@ -340,7 +340,10 @@ class _DetallePuntoScreenState extends State<DetallePuntoScreen> {
           label: 'Ahora',
           value: HorarioService.textoCombinado(
             horario: punto.horario,
-            estadoComunitario: punto.estado,
+            estadoComunitario:
+                punto.confianza == 'comunidad' || punto.confianza == 'cerrado'
+                ? punto.estado
+                : 'pendiente',
           ),
           color: estadoColor,
         ),
