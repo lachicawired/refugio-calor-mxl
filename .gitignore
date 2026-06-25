@@ -1,45 +1,75 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# Flutter / Dart
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
-/coverage/
+build/
 
-# Symbolication related
-app.*.symbols
+# Android
 
-# Obfuscation related
-app.*.map.json
+android/.gradle/
+android/local.properties
+android/app/build/
+android/app/debug/
+android/app/profile/
+android/app/release/
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# iOS / macOS
+
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+macos/Pods/
+macos/.symlinks/
+
+# Windows / Linux build outputs
+
+windows/flutter/ephemeral/
+linux/flutter/ephemeral/
+
+# IDEs
+
+.idea/
+.vscode/
+*.iml
+
+# System files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+*.log
+
+# Firebase / Secrets
+
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Keep this private unless you intentionally want it public
+
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+
+# Environment files
+
+.env
+.env.*
+*.env
+
+# Keystores / signing
+
+*.jks
+*.keystore
+key.properties
+
+# Generated coverage
+
+coverage/
