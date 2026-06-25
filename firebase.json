@@ -1,0 +1,28 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "refugio-calor-mxl",
+          "appId": "1:972181163248:android:6e9ab1ffaafcbe506d0635",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "refugio-calor-mxl",
+          "configurations": {
+            "android": "1:972181163248:android:6e9ab1ffaafcbe506d0635",
+            "ios": "1:972181163248:ios:0ec1c4b7751424c96d0635",
+            "macos": "1:972181163248:ios:0ec1c4b7751424c96d0635",
+            "web": "1:972181163248:web:9c5818dc6b5bc94f6d0635",
+            "windows": "1:972181163248:web:53a9851e136ede866d0635"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

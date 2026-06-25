@@ -1,0 +1,194 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function puntoReportadoValido() {
+      return signedIn() &&
+      request.resource.data.keys().hasOnly([
+        'nombre',
+        'tipo',
+        'direccion',
+        'telefono',
+        'lat',
+        'lng',
+        'horario',
+        'descripcion',
+        'estado',
+        'confianza',
+        'ultimaConfirmacion',
+        'confirmaciones',
+        'votosAbiertoHoy',
+        'votosCerradoHoy',
+        'diaVotacion',
+        'fuente',
+        'direccionVerificada',
+        'creadorUid',
+        'oculto',
+        'esBase',
+        'creadoEn'
+      ]) &&
+      request.resource.data.tipo in ['hidratacion', 'sombra', 'aire', 'refugio'] &&
+      request.resource.data.estado == 'pendiente' &&
+      request.resource.data.confianza == 'reciente' &&
+      request.resource.data.fuente == 'comunidad' &&
+      request.resource.data.direccionVerificada == false &&
+      request.resource.data.oculto == false &&
+      request.resource.data.esBase == false &&
+      request.resource.data.creadorUid == request.auth.uid;
+    }
+
+    function camposEstadoPublico() {
+      return [
+        'estado',
+        'confianza',
+        'confirmaciones',
+        'votosAbiertoHoy',
+        'votosCerradoHoy',
+        'diaVotacion',
+        'ultimaConfirmacion',
+        'requiereRevision',
+        'ultimaRevisionSolicitada',
+        'actualizadoEn'
+      ];
+    }
+
+    function estadoPublicoValido() {
+      return signedIn() &&
+      request.resource.data.get('estado', 'pendiente') in [
+        'abierto',
+        'pendiente',
+        'cerrado',
+        'sin_confirmar'
+      ] &&
+      request.resource.data.get('confianza', 'pendiente') in [
+        'oficial',
+        'comunidad',
+        'reciente',
+        'pendiente',
+        'cerrado'
+      ] &&
+      request.resource.data.get('votosAbiertoHoy', 0) is int &&
+      request.resource.data.get('votosCerradoHoy', 0) is int &&
+      request.resource.data.get('confirmaciones', 0) is int &&
+      request.resource.data.get('votosAbiertoHoy', 0) >= 0 &&
+      request.resource.data.get('votosCerradoHoy', 0) >= 0 &&
+      request.resource.data.get('confirmaciones', 0) >= 0;
+    }
+
+    function estadoPublicoCreateValido() {
+      return estadoPublicoValido() &&
+        request.resource.data.keys().hasOnly(camposEstadoPublico());
+    }
+
+    function estadoPublicoUpdateValido() {
+      return estadoPublicoValido() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(camposEstadoPublico());
+    }
+
+    function reporteValido() {
+      return signedIn() &&
+      request.resource.data.keys().hasOnly([
+        'puntoId',
+        'tipoReporte',
+        'creadoEn',
+        'deviceId',
+        'comentario'
+      ]) &&
+      request.resource.data.tipoReporte in [
+        'confirmado_abierto',
+        'reportado_cerrado',
+        'reportar_cambio'
+      ] &&
+      request.resource.data.deviceId == request.auth.uid &&
+      request.resource.data.comentario is string &&
+      request.resource.data.comentario.size() <= 500;
+    }
+
+    function votoValido() {
+      return signedIn() &&
+      request.resource.data.keys().hasOnly([
+        'puntoId',
+        'deviceId',
+        'tipoReporte',
+        'dia',
+        'actualizadoEn'
+      ]) &&
+      request.resource.data.tipoReporte in [
+        'confirmado_abierto',
+        'reportado_cerrado'
+      ] &&
+      request.resource.data.deviceId == request.auth.uid;
+    }
+
+    function resumenValido() {
+      return signedIn() &&
+      request.resource.data.keys().hasOnly([
+        'dia',
+        'abiertos',
+        'cerrados',
+        'total',
+        'actualizadoEn'
+      ]) &&
+      request.resource.data.abiertos is int &&
+      request.resource.data.cerrados is int &&
+      request.resource.data.total is int &&
+      request.resource.data.abiertos >= 0 &&
+      request.resource.data.cerrados >= 0 &&
+      request.resource.data.total >= 0 &&
+      request.resource.data.total == request.resource.data.abiertos + request.resource.data.cerrados &&
+      request.resource.data.dia is string &&
+      request.resource.data.dia.size() == 8;
+    }
+
+    match /puntos/{puntoId} {
+      allow read: if true;
+      allow create: if puntoReportadoValido() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /puntos_estado/{puntoId} {
+      allow read: if true;
+      allow create: if isAdmin() || estadoPublicoCreateValido();
+      allow update: if isAdmin() || estadoPublicoUpdateValido();
+      allow delete: if isAdmin();
+
+      match /votos_diarios/{votoId} {
+        allow read: if true;
+        allow create, update: if votoValido() &&
+          votoId == request.resource.data.dia + '_' + request.auth.uid;
+        allow delete: if false;
+      }
+
+      match /resumen_diario/{dia} {
+        allow read: if true;
+        allow create, update: if resumenValido();
+        allow delete: if false;
+      }
+    }
+
+    match /puntos_ocultos/{puntoId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /reportes/{reporteId} {
+      allow read: if isAdmin();
+      allow create: if reporteValido();
+      allow update, delete: if false;
+    }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update, delete: if false;
+    }
+  }
+}
