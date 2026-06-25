@@ -58,16 +58,33 @@ class _MapaScreenState extends State<MapaScreen> {
     await _puntosFuture;
   }
 
-  Color _colorPorEstado(String estado) {
-    switch (estado) {
-      case 'abierto':
+  String _textoConfianza(Punto punto) {
+    if (punto.oculto ||
+        punto.estado == 'cerrado' ||
+        punto.confianza == 'cerrado') {
+      return 'cerrado';
+    }
+    if (punto.verificadoOficialmente ||
+        punto.confianza == 'oficial' ||
+        punto.confianza == 'verificado_oficialmente') {
+      return 'oficial';
+    }
+    if (punto.aprobado || punto.confianza == 'comunidad') {
+      return 'comunidad';
+    }
+    return 'pendiente';
+  }
+
+  Color _colorPorConfianza(Punto punto) {
+    switch (_textoConfianza(punto)) {
+      case 'oficial':
+      case 'comunidad':
         return Colors.green;
-      case 'pendiente':
-        return Colors.amber.shade700;
       case 'cerrado':
         return Colors.red;
+      case 'pendiente':
       default:
-        return Colors.grey;
+        return Colors.amber.shade700;
     }
   }
 
@@ -181,7 +198,7 @@ class _MapaScreenState extends State<MapaScreen> {
                     MarkerLayer(
                       markers: [
                         ...puntosFiltrados.map((punto) {
-                          final color = _colorPorEstado(punto.estado);
+                          final color = _colorPorConfianza(punto);
 
                           return Marker(
                             point: LatLng(punto.lat, punto.lng),

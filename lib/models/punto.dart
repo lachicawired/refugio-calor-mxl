@@ -22,6 +22,8 @@ class Punto {
   final bool direccionVerificada;
   final bool oculto;
   final bool esBase;
+  final bool aprobado;
+  final bool verificadoOficialmente;
 
   Punto({
     required this.id,
@@ -44,6 +46,8 @@ class Punto {
     required this.direccionVerificada,
     this.oculto = false,
     this.esBase = false,
+    this.aprobado = false,
+    this.verificadoOficialmente = false,
   });
 
   factory Punto.fromFirestore(DocumentSnapshot doc) {
@@ -75,6 +79,11 @@ class Punto {
       direccionVerificada: data['direccionVerificada'] ?? false,
       oculto: data['oculto'] ?? false,
       esBase: data['esBase'] ?? false,
+      aprobado: data['aprobado'] ?? false,
+      verificadoOficialmente:
+          data['verificadoOficialmente'] == true ||
+          data['confianza'] == 'verificado_oficialmente' ||
+          data['confianza'] == 'oficial',
     );
   }
 
@@ -105,6 +114,8 @@ class Punto {
       'direccionVerificada': direccionVerificada,
       'oculto': oculto,
       'esBase': esBase,
+      'aprobado': aprobado,
+      'verificadoOficialmente': verificadoOficialmente,
     };
   }
 
@@ -129,6 +140,8 @@ class Punto {
     bool? direccionVerificada,
     bool? oculto,
     bool? esBase,
+    bool? aprobado,
+    bool? verificadoOficialmente,
   }) {
     return Punto(
       id: id ?? this.id,
@@ -151,6 +164,9 @@ class Punto {
       direccionVerificada: direccionVerificada ?? this.direccionVerificada,
       oculto: oculto ?? this.oculto,
       esBase: esBase ?? this.esBase,
+      aprobado: aprobado ?? this.aprobado,
+      verificadoOficialmente:
+          verificadoOficialmente ?? this.verificadoOficialmente,
     );
   }
 }

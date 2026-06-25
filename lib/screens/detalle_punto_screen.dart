@@ -149,17 +149,13 @@ class _DetallePuntoScreenState extends State<DetallePuntoScreen> {
     }
   }
 
-  Color _colorPorEstado(String estado) {
-    switch (estado) {
-      case 'abierto':
-        return Colors.green;
-      case 'pendiente':
-        return Colors.amber.shade700;
-      case 'cerrado':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+  Color _colorPorConfianza(Punto punto) {
+    final texto = getTextoConfianza(punto);
+    if (texto == 'Cerrado/no disponible') return Colors.red;
+    if (texto == 'Pendiente de revisar') return Colors.amber.shade700;
+    if (texto == 'Verificado oficialmente') return Colors.green;
+    if (texto == 'Verificado por comunidad') return Colors.green;
+    return Colors.grey;
   }
 
   IconData _iconoPorTipo(String tipo) {
@@ -192,32 +188,21 @@ class _DetallePuntoScreenState extends State<DetallePuntoScreen> {
     }
   }
 
-  String _estadoLegible(String estado) {
-    switch (estado) {
-      case 'abierto':
-        return 'Confirmado abierto';
-      case 'pendiente':
-        return 'Pendiente de revisar';
-      case 'cerrado':
-        return 'Cerrado o no disponible';
-      default:
-        return 'Sin verificar';
+  String getTextoConfianza(Punto punto) {
+    if (punto.oculto ||
+        punto.estado == 'cerrado' ||
+        punto.confianza == 'cerrado') {
+      return 'Cerrado/no disponible';
     }
-  }
-
-  String _confianzaLegible(String confianza) {
-    switch (confianza) {
-      case 'oficial':
-        return 'Verificado oficialmente';
-      case 'comunidad':
-        return 'Verificado por comunidad';
-      case 'reciente':
-        return 'Reportado recientemente';
-      case 'cerrado':
-        return 'Cerrado/no disponible';
-      default:
-        return 'Pendiente de revisar';
+    if (punto.verificadoOficialmente ||
+        punto.confianza == 'oficial' ||
+        punto.confianza == 'verificado_oficialmente') {
+      return 'Verificado oficialmente';
     }
+    if (punto.aprobado || punto.confianza == 'comunidad') {
+      return 'Verificado por comunidad';
+    }
+    return 'Pendiente de revisar';
   }
 
   String _fechaLegible(DateTime? fecha) {
@@ -262,7 +247,8 @@ class _DetallePuntoScreenState extends State<DetallePuntoScreen> {
 
   Widget _buildContenido(Punto punto) {
     final ubicacion = widget.miUbicacion;
-    final estadoColor = _colorPorEstado(punto.estado);
+    final estadoColor = _colorPorConfianza(punto);
+    final textoConfianza = getTextoConfianza(punto);
 
     String? distanciaTexto;
     if (ubicacion != null) {
@@ -289,7 +275,7 @@ class _DetallePuntoScreenState extends State<DetallePuntoScreen> {
               backgroundColor: estadoColor.withValues(alpha: 0.14),
               side: BorderSide(color: estadoColor),
               label: Text(
-                _estadoLegible(punto.estado),
+                textoConfianza,
                 style: TextStyle(
                   color: estadoColor,
                   fontWeight: FontWeight.w700,
@@ -341,7 +327,8 @@ class _DetallePuntoScreenState extends State<DetallePuntoScreen> {
           value: HorarioService.textoCombinado(
             horario: punto.horario,
             estadoComunitario:
-                punto.confianza == 'comunidad' || punto.confianza == 'cerrado'
+                textoConfianza == 'Verificado por comunidad' ||
+                    textoConfianza == 'Cerrado/no disponible'
                 ? punto.estado
                 : 'pendiente',
           ),
@@ -366,7 +353,7 @@ class _DetallePuntoScreenState extends State<DetallePuntoScreen> {
         _SectionTitle('Confianza comunitaria'),
         const SizedBox(height: 8),
         _TrustPanel(
-          confianza: _confianzaLegible(punto.confianza),
+          confianza: textoConfianza,
           ultimaConfirmacion: _fechaLegible(punto.ultimaConfirmacion),
           votosAbiertoHoy: punto.votosAbiertoHoy,
           votosCerradoHoy: punto.votosCerradoHoy,

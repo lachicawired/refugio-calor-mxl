@@ -193,6 +193,9 @@ class PuntoService {
       direccionVerificada:
           estado['direccionVerificada'] ?? punto.direccionVerificada,
       oculto: estado['oculto'] ?? punto.oculto,
+      aprobado: estado['aprobado'] ?? punto.aprobado,
+      verificadoOficialmente:
+          estado['verificadoOficialmente'] ?? punto.verificadoOficialmente,
     );
   }
 

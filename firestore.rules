@@ -36,6 +36,7 @@ service cloud.firestore {
         'esBase',
         'aprobado',
         'rechazado',
+        'verificadoOficialmente',
         'creadoEn'
       ]) &&
       request.resource.data.tipo in ['hidratacion', 'sombra', 'aire', 'refugio'] &&
@@ -47,6 +48,7 @@ service cloud.firestore {
       request.resource.data.esBase == false &&
       request.resource.data.aprobado == false &&
       request.resource.data.rechazado == false &&
+      request.resource.data.verificadoOficialmente == false &&
       request.resource.data.creadorUid == request.auth.uid;
     }
 
