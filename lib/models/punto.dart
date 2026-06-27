@@ -3,22 +3,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Punto {
   final String id;
   final String nombre;
-  final String tipo; // "refugio" | "hidratacion" | "sombra" | "aire"
+  final String tipo;
   final String direccion;
   final String telefono;
   final double lat;
   final double lng;
   final String horario;
   final String descripcion;
-  final String estado; // "abierto" | "pendiente" | "sin_confirmar" | "cerrado"
-  final String
-  confianza; // "oficial" | "comunidad" | "reciente" | "pendiente" | "cerrado"
+  final String estado;
+  final String confianza;
   final DateTime? ultimaConfirmacion;
   final int confirmaciones;
   final int votosAbiertoHoy;
   final int votosCerradoHoy;
   final String diaVotacion;
-  final String fuente; // "manual" | "comunidad"
+  final String fuente;
   final bool direccionVerificada;
   final bool oculto;
   final bool esBase;

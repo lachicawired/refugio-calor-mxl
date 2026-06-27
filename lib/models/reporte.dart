@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Reporte {
   final String id;
   final String puntoId;
-  final String tipoReporte; // "confirmado_abierto" | "reportado_cerrado" | "reportar_cambio"
+  final String tipoReporte;
   final DateTime creadoEn;
   final String deviceId;
   final String comentario;

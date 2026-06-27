@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/punto.dart';
 import '../services/punto_service.dart';
 
-// Esta pantalla es temporal: solo sirve para cargar los primeros
-// puntos reales a Firestore sin tener que hacerlo a mano en la consola.
-// Cuando ya tengas tus puntos cargados, puedes borrar este archivo.
 class SeedScreen extends StatefulWidget {
   const SeedScreen({super.key});
 
@@ -17,8 +14,6 @@ class _SeedScreenState extends State<SeedScreen> {
   bool _cargando = false;
   String _mensaje = '';
 
-  // Aquí defines todos los puntos que quieres cargar de un jalón.
-  // Agrega o quita objetos Punto de esta lista según necesites.
   final List<Punto> _puntosIniciales = [
     Punto(
       id: '',

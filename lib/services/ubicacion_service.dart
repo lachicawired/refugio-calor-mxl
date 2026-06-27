@@ -1,8 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 
 class UbicacionService {
-  // Pide permiso y regresa la posición actual del usuario.
-  // Regresa null si el usuario niega el permiso o el GPS está apagado.
   static Future<Position?> obtenerUbicacionActual() async {
     bool servicioActivo = await Geolocator.isLocationServiceEnabled();
     if (!servicioActivo) {
@@ -25,8 +23,6 @@ class UbicacionService {
     return await Geolocator.getCurrentPosition();
   }
 
-  // Calcula la distancia en metros entre dos coordenadas,
-  // y la regresa ya formateada para mostrar en pantalla.
   static String calcularDistanciaFormateada(
     double lat1,
     double lng1,
